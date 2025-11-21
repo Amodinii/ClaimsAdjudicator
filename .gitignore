@@ -1,0 +1,114 @@
+# -----------------------------
+# PYTHON BACKEND
+# -----------------------------
+
+# Byte-compiled / optimized
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+.venv/
+ENV/
+env/
+
+# Python cache
+*.pyo
+*.pyd
+
+# Local settings
+*.env
+*.env.*
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Logs
+backend/logs/
+*.log
+
+# Coverage
+.coverage
+coverage.xml
+htmlcov/
+
+# FastAPI / Uvicorn reload files
+*.pid
+
+# MyPy / linting cache
+.mypy_cache/
+.dmypy.json
+.pytest_cache/
+ruff_cache/
+pytest_cache/
+
+
+*.sqlite
+*.db
+
+
+# -----------------------------
+# FRONTEND (React / Vite)
+# -----------------------------
+
+# Dependencies
+frontend/node_modules/
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+pnpm-debug.log
+
+# Production build
+frontend/dist/
+dist/
+
+# Logs
+frontend/*.log
+
+# Local environment variables
+frontend/.env
+frontend/.env.*
+
+
+# -----------------------------
+# EDITOR / OS FILES
+# -----------------------------
+
+# VSCode
+.vscode/
+*.code-workspace
+
+# JetBrains / PyCharm / WebStorm
+.idea/
+*.iws
+*.iml
+
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+
+# Data output / OCR outputs
+backend/data/extracted/
+backend/data/tmp/
+backend/data/uploads/
+backend/data/cache/
+
+# PDFs, images uploaded for OCR (avoid committing PHI)
+*.pdf
+*.jpg
+*.jpeg
+*.png
+*.tiff
+
+# LLM cached responses (optional)
+backend/app/data/llm_cache/
+
+# Docker volumes
+docker_volumes/
