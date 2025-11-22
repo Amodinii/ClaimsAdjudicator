@@ -1,6 +1,0 @@
-{
-  "version": 3,
-  "sources": [],
-  "sections": [
-    {"offset": {"line": 10, "column": 0}, "map": {"version":3,"sources":["file:///D:/ClaimsAdjudicator/frontend/app/page.tsx"],"sourcesContent":["import ClaimDashboard from \"./components/claim-dashboard\"\r\n\r\nexport default function App() {\r\n  return (\r\n    <main className=\"min-h-screen bg-gray-50 flex items-center justify-center p-4 md:p-8\">\r\n      <ClaimDashboard />\r\n    </main>\r\n  )\r\n}\r\n"],"names":[],"mappings":";;;;;;;;;;;;AAEe,SAAS;IACtB,qBACE,8OAAC;QAAK,WAAU;kBACd,cAAA,8OAAC;;;;;;;;;;AAGP"}}]
-}
