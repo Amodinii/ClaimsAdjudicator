@@ -3,3 +3,8 @@ uvicorn>=0.22.0
 pydantic>=1.10.0
 python-multipart>=0.0.6
 pytest>=7.0.0
+google-generativeai
+pillow
+python-multipart
+python-dotenv
+sqlalchemy

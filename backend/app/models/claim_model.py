@@ -17,6 +17,7 @@ class Member(BaseModel):
 class Item(BaseModel):
     name: str
     amount: float
+    category: Optional[str] = None
 
 class ClaimModel(BaseModel):
     treatment_date: Optional[str] = None

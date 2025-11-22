@@ -69,9 +69,13 @@ dist/
 # Logs
 frontend/*.log
 
-# Local environment variables
+# Local environment variables and modules
 frontend/.env
 frontend/.env.*
+frontend/node_modules/.
+
+env.local
+.env.local
 
 
 # -----------------------------
@@ -99,6 +103,8 @@ backend/data/extracted/
 backend/data/tmp/
 backend/data/uploads/
 backend/data/cache/
+
+backend/plum_claims.db
 
 # PDFs, images uploaded for OCR (avoid committing PHI)
 *.pdf
