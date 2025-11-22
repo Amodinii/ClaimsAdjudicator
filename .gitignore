@@ -73,6 +73,7 @@ frontend/*.log
 frontend/.env
 frontend/.env.*
 frontend/node_modules/.
+frontend/.next/
 
 env.local
 .env.local
