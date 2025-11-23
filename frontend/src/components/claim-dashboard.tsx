@@ -29,7 +29,7 @@ function cn(...inputs: ClassValue[]) {
 }
 
 // --- CONSTANTS ---
-const API_BASE = "${import.meta.env.VITE_API_URL}"
+const API_BASE = import.meta.env.VITE_API_URL
 
 const POLICY_PREVIEW = {
   "policy_id": "PLUM_OPD_2024",
