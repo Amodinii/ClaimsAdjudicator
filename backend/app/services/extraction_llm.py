@@ -30,6 +30,11 @@ Your job is to extract structured data from medical documents (bills, prescripti
    - Extract the specific test results into a "lab_results" array.
    - Capture: Test Name, Measured Result, and Normal Range.
    - Do NOT add these diagnostic values to the "items" (financial) list unless there is a price attached.
+6. **Handwriting Handling**: 
+   - If the document is handwritten (like a prescription), use context to infer unclear words. 
+   - For example, if you see "P_r_c_t_m_l", infer "Paracetamol". 
+   - If a word is illegible, return "[Illegible]".
+   
 
 ### JSON OUTPUT SCHEMA:
 {

@@ -15,7 +15,8 @@ import {
   Files,
   BookOpen,
   X,
-  Info
+  Info,
+  ShieldAlert
 } from "lucide-react"
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
@@ -24,7 +25,7 @@ function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-// --- CONSTANTS: MOCK POLICY FOR DISPLAY ---
+// --- CONSTANTS ---
 const POLICY_PREVIEW = {
   "policy_id": "PLUM_OPD_2024",
   "policy_name": "Plum OPD Advantage",
@@ -76,7 +77,16 @@ interface ClaimResponse {
   }
 }
 
-export default function ClaimDashboard() {
+// Updated Props to accept User
+interface ClaimDashboardProps {
+    user: {
+        name: string
+        role: "employee" | "admin"
+        memberId: string
+    }
+}
+
+export default function ClaimDashboard({ user }: ClaimDashboardProps) {
   const [files, setFiles] = useState<File[]>([])
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [dragActive, setDragActive] = useState(false)
@@ -142,6 +152,8 @@ export default function ClaimDashboard() {
     files.forEach((file) => {
         formData.append("files", file)
     })
+    // Pass user context to backend if needed, or just for tracking
+    if(user.memberId) formData.append("member_id", user.memberId)
 
     try {
       const response = await fetch("http://localhost:8000/v1/claims/upload", {
@@ -170,6 +182,28 @@ export default function ClaimDashboard() {
     } finally {
       setIsLoading(false)
     }
+  }
+
+  // --- ADMIN OVERRIDE LOGIC ---
+  const handleOverride = (newDecision: "APPROVED" | "REJECTED") => {
+    if (!result) return;
+    
+    // Optimistic update of the result state
+    setResult({
+        ...result,
+        decision: {
+            ...result.decision,
+            decision: newDecision,
+            // If forcing approval, approve the full extracted amount
+            approved_amount: newDecision === "APPROVED" ? (result.extracted_data.total_amount || 0) : 0,
+            // Add a reason to the top of the list
+            reasons: [`⚠️ Manual Override by Admin: ${user.name}`, ...result.decision.reasons],
+            // Update narrative to reflect override
+            summary_text: newDecision === "APPROVED" 
+                ? `This claim was manually approved by ${user.name} after review.` 
+                : `This claim was manually rejected by ${user.name}.`
+        }
+    })
   }
 
   const reset = () => {
@@ -238,7 +272,7 @@ export default function ClaimDashboard() {
                 </div>
                 <div className="p-6 max-h-[400px] overflow-y-auto bg-gray-50">
                     <div className="space-y-6 p-2">
-                        {/* 1. Limits */}
+                        {/* Limits */}
                         <div>
                             <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Coverage Limits</h4>
                             <div className="grid grid-cols-2 gap-3">
@@ -252,8 +286,7 @@ export default function ClaimDashboard() {
                                 </div>
                             </div>
                         </div>
-
-                        {/* 2. Rules */}
+                        {/* Rules */}
                         <div>
                             <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Key Rules</h4>
                             <div className="space-y-2">
@@ -267,8 +300,7 @@ export default function ClaimDashboard() {
                                 </div>
                             </div>
                         </div>
-
-                        {/* 3. Exclusions */}
+                        {/* Exclusions */}
                         <div>
                             <h4 className="text-xs font-bold text-red-400 uppercase tracking-wider mb-3">Exclusions</h4>
                             <ul className="list-disc pl-5 space-y-1">
@@ -288,11 +320,10 @@ export default function ClaimDashboard() {
         </div>
       )}
 
-      {/* --- HEALTH CONTEXT MODAL (Themed to match Adjudicate Button) --- */}
+      {/* --- HEALTH CONTEXT MODAL --- */}
       {showHealthModal && result?.decision.medical_context && (
         <div className="absolute inset-0 z-50 bg-black/50 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-200">
             <div className="bg-white w-full max-w-md rounded-xl shadow-2xl border border-gray-200 overflow-hidden">
-                {/* GRADIENT HEADER TO MATCH BUTTON */}
                 <div className="bg-gradient-to-r from-fuchsia-600 to-purple-600 p-4 flex justify-between items-center">
                     <div className="flex items-center gap-2 text-white">
                         <Activity className="w-5 h-5" />
@@ -589,6 +620,43 @@ export default function ClaimDashboard() {
               </div>
             </div>
 
+            {/* --- ADMIN OVERRIDE PANEL (New Feature) --- */}
+            {user.role === 'admin' && (
+                <div className="mt-6 p-4 bg-gray-900 rounded-xl border border-gray-700 text-white shadow-xl ring-1 ring-gray-700">
+                    <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                            <ShieldAlert className="w-4 h-4 text-red-400 animate-pulse" />
+                            <span className="text-xs font-bold uppercase tracking-widest text-gray-400">Admin Console</span>
+                        </div>
+                        <span className="text-xs text-gray-500 font-mono">OFFICER: {user.name.toUpperCase()}</span>
+                    </div>
+                    
+                    <p className="text-sm text-gray-300 mb-4 border-b border-gray-800 pb-4">
+                        Admin override is available. You can force a final decision regardless of AI analysis.
+                    </p>
+                    
+                    <div className="grid grid-cols-2 gap-3">
+                        <button 
+                            onClick={() => handleOverride("APPROVED")}
+                            disabled={result.decision.decision === "APPROVED"}
+                            className="py-2.5 px-4 rounded-lg bg-green-600 hover:bg-green-700 disabled:bg-gray-800 disabled:text-gray-600 text-white font-semibold text-xs uppercase tracking-wide transition-colors flex items-center justify-center gap-2"
+                        >
+                            <CheckCircle className="w-4 h-4" />
+                            Force Approve
+                        </button>
+                        <button 
+                            onClick={() => handleOverride("REJECTED")}
+                            disabled={result.decision.decision === "REJECTED"}
+                            className="py-2.5 px-4 rounded-lg bg-red-600 hover:bg-red-700 disabled:bg-gray-800 disabled:text-gray-600 text-white font-semibold text-xs uppercase tracking-wide transition-colors flex items-center justify-center gap-2"
+                        >
+                            <XCircle className="w-4 h-4" />
+                            Force Reject
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Reset Button */}
             <div className="mt-8 pt-6 border-t border-gray-100 flex justify-end">
               <button
                 onClick={reset}
