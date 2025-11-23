@@ -11,3 +11,4 @@ sqlalchemy
 pillow
 faker
 groq
+imagehash
