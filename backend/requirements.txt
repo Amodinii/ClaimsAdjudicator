@@ -8,3 +8,6 @@ pillow
 python-multipart
 python-dotenv
 sqlalchemy
+pillow
+faker
+groq
