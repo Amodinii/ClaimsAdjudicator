@@ -8,8 +8,7 @@ class ClaimRecord(Base):
     id = Column(Integer, primary_key=True, index=True)
     
     file_name = Column(String)
-    # --- NEW COLUMN ---
-    member_id = Column(String, index=True, nullable=True) 
+    member_id = Column(String, index=True, nullable=True)
     
     status = Column(String)
     total_amount = Column(Float)
@@ -18,6 +17,6 @@ class ClaimRecord(Base):
     
     extracted_data = Column(JSON)
     decision_reasons = Column(JSON)
-    image_hash = Column(String, nullable=True)
+    image_hash = Column(String, nullable=True) # Stores the pHash fingerprint
     
     created_at = Column(DateTime, default=datetime.utcnow)

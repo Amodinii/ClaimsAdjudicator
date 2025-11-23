@@ -69,7 +69,7 @@ export default function LoginScreen({ onLogin }: LoginProps) {
                   value={name}
                   onChange={(e) => {
                       setName(e.target.value)
-                      setError("") // Clear error when typing
+                      setError("") 
                   }}
                   className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-fuchsia-500 focus:border-transparent transition-all"
                     placeholder="Enter your full name"
