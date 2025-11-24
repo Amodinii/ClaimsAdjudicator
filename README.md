@@ -64,12 +64,12 @@ LLMs are excellent at understanding unstructured text but unreliable at arithmet
   * **The Neural Layer (Gemini 2.5 Flash):** Responsible strictly for extraction and normalization. It reads noisy OCR text, interprets handwritten prescriptions, and maps non-standard terms (e.g., "Teeth Whitening") to standardized policy categories (e.g., "Dental - Cosmetic").
   * **The Symbolic Layer (Python Rule Engine):** Responsible for adjudication. Once the data is structured, a deterministic Python engine enforces the policy limits. It calculates co-pays, checks sub-limits, and applies exclusions. This ensures that financial decisions are 100% mathematically accurate and traceable.
 
-### B. Computer Vision for Pre-Computation Fraud Detection
+### B. Security & Integrity: Pre-Computation Fraud Detection
+Sending every image to an LLM is expensive and inefficient. A robust system must reject obvious duplicates before they incur processing costs.
 
-Sending every image to an LLM is expensive and inefficient. A robust system must reject obvious fraud before it reaches the model.
-
-  * **Implementation:** I implemented Perceptual Image Hashing (pHash) using the `imagehash` library.
-  * **Why it is superior:** Unlike cryptographic hashes (MD5/SHA), which change entirely if a single pixel is altered, pHash generates a "visual fingerprint." This allows the system to detect duplicate claims even if the user has resized, cropped, or slightly color-corrected the image to bypass standard filters. This serves as a high-efficiency "Soft Block" mechanism at the entry gate.
+* **Implementation:** I implemented **Cryptographic Hashing (SHA-256)** to generate unique digital fingerprints for every uploaded file.
+* **Why it is superior for Documents:** While Perceptual Hashing (pHash) is good for natural images, it is often *too* aggressive for documents, falsely flagging distinct bills as duplicates simply because they share a hospital letterhead or layout. 
+* **The Result:** SHA-256 provides a deterministic "Hard Block" against exact file re-uploads and spam, ensuring that the system never processes the exact same file twice, while correctly allowing distinct bills that share similar visual templates to pass through to the AI layer.
 
 ### C. Contextual Multi-Document Reasoning
 
