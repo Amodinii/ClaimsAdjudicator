@@ -176,13 +176,28 @@ Allows an administrator to override the AI decision.
       * *Implication:* On serverless platforms with ephemeral storage (like Render Free Tier), data resets on redeployment.
       * *Production Path:* Migration to a managed PostgreSQL instance to handle concurrent writes and ensure data durability.
 
-## 6\. Future Improvements
+## 6\. Future Roadmap & Architecture Evolution
 
-  * **Self-Hosted Fine-Tuned VLM (No API Costs):**
-      * *Current:* Depends on external APIs (Gemini 2.5 Flash), incurring latency and per-token costs.
-      * *Future:* Fine-tune a smaller open-source Vision Language Model (like LLaVA-Next or Qwen-VL) specifically on medical invoices. This would allow the model to run entirely on-premise (or in a private cloud), eliminating API fees and ensuring 100% data privacy.
-  * **Custom ML Fraud Detection Model:**
-      * *Current:* Uses Perceptual Hashing (pHash) for deduplication.
-      * *Future:* Train a dedicated Convolutional Neural Network (CNN) or an Autoencoder on a dataset of manipulated document images. This model would detect subtle forensic anomalies—such as mismatched fonts, pixel grid inconsistencies, or metadata tampering—that simple hashing misses.
-  * **Predictive Risk Modeling (Tabular Deep Learning):**
-      * *Future:* Train a tabular model (using XGBoost or TabNet) on historical claims data to predict the "risk probability" of a claim before it even reaches the adjudication engine. High-confidence approvals could be fast-tracked, while high-risk outliers are prioritized for manual audit.
+While this MVP demonstrates a functional neuro-symbolic pipeline, a production-scale deployment would require advancements in both AI model architecture and system design to handle scale, cost, and security.
+
+### AI Research & Model Optimization
+
+* **Self-Hosted Fine-Tuned VLM (Privacy & Cost Efficiency)**
+    * **Current State:** The system relies on external APIs (Gemini 2.5 Flash), creating dependencies on third-party latency and per-token pricing.
+    * **Future State:** Distill the knowledge from the large foundation model into a smaller, open-source Vision Language Model (e.g., **PaliGemma 3B** or **LLaVA-Next**). Fine-tuning this model specifically on a dataset of medical invoices would allow for fully on-premise deployment, ensuring 100% data privacy and eliminating variable API costs.
+
+* **Visual Forensics with Deep Learning**
+    * **Current State:** Utilizes Perceptual Hashing (pHash) for exact duplicate detection.
+    * **Future State:** Train a dedicated **Convolutional Neural Network (CNN)** or **Autoencoder** on a dataset of digitally manipulated documents. This model would detect subtle forensic anomalies—such as mismatched fonts, pixel grid inconsistencies, or metadata tampering—that standard hashing algorithms cannot identify.
+
+* **Predictive Risk Modeling (Tabular Learning)**
+    * **Future State:** Implement a "Fast Track" adjudication lane using a gradient-boosting model (**XGBoost** or **TabNet**). Trained on historical claims data, this model would predict the probability of a claim being fraudulent or rejected before it reaches the extraction layer. High-confidence approvals could be fast-tracked to optimize compute resources.
+
+### System Engineering & Scalability
+
+* **Dynamic Policy Engine (RAG)**
+    * **Current State:** Adjudication rules are loaded from a static `policy_terms.json` file.
+    * **Future State:** Ingest thousands of corporate policy documents into a Vector Database (**Pinecone**). At runtime, the system would use **Retrieval Augmented Generation (RAG)** to dynamically fetch the specific coverage clauses and sub-limits relevant to the user's specific plan ID, enabling multi-tenant support.
+
+* **Graph-Based Fraud Detection**
+    * **Future State:** Implement **Graph Neural Networks (GNN)** to model relationships between entities. This would detect organized fraud rings by identifying non-obvious patterns, such as multiple unrelated employees uploading bills generated from the same device fingerprint or referencing the same doctor ID across geographically impossible locations.
