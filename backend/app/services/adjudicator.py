@@ -211,6 +211,7 @@ def check_coverage_and_limits(claim: Dict[str, Any]) -> Tuple[bool, List[str], f
         
         approved_running_total = 0.0
         
+        # --- 1. Item Level Validation ---
         policy_exclusions = POLICY.get("exclusions", [])
         extended_exclusions = policy_exclusions + ["Whitening", "Aesthetic", "Beautification", "Cosmetic"]
         
@@ -244,6 +245,7 @@ def check_coverage_and_limits(claim: Dict[str, Any]) -> Tuple[bool, List[str], f
                 if "consultation" in category or "consultation" in name:
                     has_consultation = True
 
+        # --- 2. Sub-limits ---
         diagnosis = (claim.get("diagnosis") or "").lower()
         
         if "root canal" in diagnosis or "tooth" in diagnosis or "dental" in diagnosis:
@@ -255,7 +257,7 @@ def check_coverage_and_limits(claim: Dict[str, Any]) -> Tuple[bool, List[str], f
                 breakdown.append({"label": "Dental Sub-limit Exceeded", "amount": -diff, "type": "deduction"})
                 approved_running_total = dental_limit
 
-
+        # --- 3. Global Per Claim Limit ---
         if not specific_limit_applied:
             per_claim_limit = money(POLICY["coverage_details"]["per_claim_limit"])
             if approved_running_total > per_claim_limit:
@@ -264,6 +266,7 @@ def check_coverage_and_limits(claim: Dict[str, Any]) -> Tuple[bool, List[str], f
                 breakdown.append({"label": "Per-Claim Limit Exceeded", "amount": -diff, "type": "deduction"})
                 approved_running_total = per_claim_limit
 
+        # --- 4. Network Discount ---
         hospital = claim.get("hospital") or {}
         in_network = False
         if hospital.get("name"):
@@ -281,6 +284,7 @@ def check_coverage_and_limits(claim: Dict[str, Any]) -> Tuple[bool, List[str], f
                 approved_running_total -= discount
                 network_discount_applied = True
 
+        # --- 5. Co-pay ---
         should_apply_copay = has_consultation and not network_discount_applied and not specific_limit_applied and not is_alternative
         
         if should_apply_copay:
@@ -290,6 +294,7 @@ def check_coverage_and_limits(claim: Dict[str, Any]) -> Tuple[bool, List[str], f
                 breakdown.append({"label": f"Co-pay ({copay_pct}%)", "amount": -copay, "type": "deduction"})
                 approved_running_total -= copay
 
+        # Final
         approved_running_total = max(0.0, approved_running_total)
         breakdown.append({"label": "Final Approved Amount", "amount": approved_running_total, "type": "final"})
 
@@ -366,6 +371,9 @@ def adjudicate_claim(claim: Dict[str, Any]) -> Dict[str, Any]:
 
         if result["decision"] in ["REJECTED", "MANUAL_REVIEW"]:
             result["approved_amount"] = 0.0
+            for item in breakdown:
+                if item["type"] == "final":
+                    item["amount"] = 0.0
         else:
             result["approved_amount"] = approved_amount
 

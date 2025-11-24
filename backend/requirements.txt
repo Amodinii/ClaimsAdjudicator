@@ -12,3 +12,4 @@ pillow
 faker
 groq
 imagehash
+cloudinary

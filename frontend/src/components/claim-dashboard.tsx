@@ -112,7 +112,13 @@ export default function ClaimDashboard({ user }: ClaimDashboardProps) {
   const [queueItems, setQueueItems] = useState<any[]>([])
 
   // Helper to display server images
-  const getFileUrl = (filename: string) => `${API_BASE}/uploads/${filename}`
+  const getFileUrl = (filenameOrUrl: string) => {
+  if (!filenameOrUrl) return "";
+  // If it's already a full URL (from Cloudinary), return it as is
+  if (filenameOrUrl.startsWith("http")) return filenameOrUrl;
+  // Fallback for old local files (if any)
+  return `${API_BASE}/uploads/${filenameOrUrl}`;
+}
 
   // --- FILE HANDLING ---
   const handleDrag = useCallback((e: React.DragEvent) => {

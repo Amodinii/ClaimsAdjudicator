@@ -1,3 +1,6 @@
+import os
+import cloudinary
+import cloudinary.uploader
 from fastapi import APIRouter, HTTPException, UploadFile, File, Form, Depends, Body
 from sqlalchemy.orm import Session
 from sqlalchemy import func
@@ -12,6 +15,13 @@ from ...core.database import get_db
 from ...utils.logging_utils import setup_logging
 from ...services.narrator_llm import generate_narrative
 from ...services.fraud_detection import calculate_phash, check_duplicate_images
+
+cloudinary.config( 
+  cloud_name = os.getenv("CLOUDINARY_CLOUD_NAME"), 
+  api_key = os.getenv("CLOUDINARY_API_KEY"), 
+  api_secret = os.getenv("CLOUDINARY_API_SECRET"),
+  secure = True
+)
 
 router = APIRouter(prefix="/v1/claims", tags=["claims"])
 logger = setup_logging()
@@ -55,22 +65,42 @@ async def upload_claim_document(
     db: Session = Depends(get_db)
 ):
     try:
-        filenames = [f.filename for f in files]
-        logger.info(f"Received {len(files)} files for upload: {filenames}")
+        original_filenames = [f.filename for f in files]
+        logger.info(f"Received {len(files)} files for upload: {original_filenames}")
 
         file_contents = []
         computed_hashes = []
+        uploaded_urls = [] 
         is_duplicate_image = False
 
         for file in files:
+            # 1. Read file into memory
             content = await file.read()
             file_contents.append(content)
+            
+            # 2. Upload to Cloudinary
+            try:
+                # We upload the bytes ('content') directly
+                # resource_type="auto" handles PDFs and Images automatically
+                upload_result = cloudinary.uploader.upload(content, resource_type="auto")
+                secure_url = upload_result.get("secure_url")
+                uploaded_urls.append(secure_url)
+                logger.info(f"Uploaded to Cloudinary: {secure_url}")
+            except Exception as cloud_err:
+                logger.error(f"Cloudinary upload failed for {file.filename}: {cloud_err}")
+                raise HTTPException(status_code=500, detail="Failed to upload image to cloud storage")
+
+            # 3. Calculate Hash for Fraud Detection
             phash = calculate_phash(content)
             if phash:
                 computed_hashes.append(phash)
                 if check_duplicate_images(phash, db):
                     is_duplicate_image = True
 
+        # Combine URLs for storage (comma separated)
+        combined_file_urls = ", ".join(uploaded_urls)
+
+        # --- DUPLICATE HANDLING ---
         if is_duplicate_image:
             logger.warning("Duplicate detected. Flagging for review.")
             extracted_data = {"total_amount": 0.0, "diagnosis": "Potential Duplicate Upload"}
@@ -84,7 +114,7 @@ async def upload_claim_document(
             }
             
             db_record = ClaimRecord(
-                file_name=", ".join(filenames),
+                file_name=combined_file_urls, 
                 status="MANUAL_REVIEW",
                 total_amount=0.0,
                 approved_amount=0.0,
@@ -100,15 +130,17 @@ async def upload_claim_document(
             return {
                 "status": "ok",
                 "claim_id": db_record.id,
-                "files_processed": filenames,
+                "files_processed": uploaded_urls,
                 "extracted_data": extracted_data,
                 "decision": decision_result
             }
 
-        extracted_data = await extract_claim_data(file_contents, filenames)
+        # --- AI EXTRACTION ---
+        extracted_data = await extract_claim_data(file_contents, original_filenames)
         if not extracted_data:
             raise HTTPException(status_code=422, detail="AI Extraction Failed.")
 
+        # --- MEMBER RESOLUTION ---
         final_member_id = None
         if member_id: final_member_id = member_id
         elif extracted_data.get("member", {}).get("member_id"): final_member_id = extracted_data.get("member", {}).get("member_id")
@@ -118,6 +150,7 @@ async def upload_claim_document(
         if not extracted_data.get("member"): extracted_data["member"] = {}
         extracted_data["member"]["member_id"] = final_member_id
 
+        # --- VELOCITY CHECK ---
         todays_claim_count = 0
         if final_member_id != "Unknown_Guest":
             today = date.today()
@@ -129,22 +162,21 @@ async def upload_claim_document(
         
         extracted_data["prev_claims_same_day"] = todays_claim_count
 
-        # Adjudication
+        # --- ADJUDICATION ---
         decision_result = adjudicate_claim(extracted_data)
         
-        # Narrator
+        # --- NARRATOR ---
         narrative_data = generate_narrative(extracted_data, decision_result)
         decision_result["summary_text"] = narrative_data.get("summary")
         decision_result["medical_context"] = narrative_data.get("medical_context")
 
-        # Save to Database
-        combined_filenames = ", ".join(filenames)
+        # --- SAVE TO DATABASE ---
         db_reasons = decision_result.get("reasons", [])[:]
         if decision_result.get("summary_text"):
             db_reasons.insert(0, f"Summary: {decision_result['summary_text']}")
 
         db_record = ClaimRecord(
-            file_name=combined_filenames,
+            file_name=combined_file_urls, # STORE URL NOT FILENAME
             member_id=final_member_id,
             status=decision_result["decision"],
             total_amount=extracted_data.get("total_amount", 0.0),
@@ -163,7 +195,7 @@ async def upload_claim_document(
         return {
             "status": "ok",
             "claim_id": db_record.id, 
-            "files_processed": filenames,
+            "files_processed": uploaded_urls, # Return URLs
             "extracted_data": extracted_data,
             "decision": decision_result
         }
