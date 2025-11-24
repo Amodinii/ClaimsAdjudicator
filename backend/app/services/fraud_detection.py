@@ -1,6 +1,4 @@
-import imagehash
-from PIL import Image
-import io
+import hashlib
 from sqlalchemy.orm import Session
 from ..models.sql_models import ClaimRecord
 from ..utils.logging_utils import setup_logging
@@ -9,50 +7,31 @@ logger = setup_logging()
 
 def calculate_phash(image_bytes: bytes) -> str:
     """
-    Generates a Difference Hash (dHash) of an image.
-    dHash is better for documents/text than pHash because it tracks 
-    gradients (text lines) rather than just frequency structure.
+    Generates a SHA-256 cryptographic hash of the file.
+    This ensures that EXACTLY identical files are flagged,
+    but similar-looking bills (same template, different text) are allowed.
     """
     try:
-        img = Image.open(io.BytesIO(image_bytes))
-        hash_obj = imagehash.dhash(img, hash_size=8)
-        
-        return str(hash_obj)
+        # Calculate SHA-256 hash of the raw bytes
+        file_hash = hashlib.sha256(image_bytes).hexdigest()
+        return file_hash
     except Exception as e:
-        logger.error(f"Failed to generate Hash: {e}")
+        logger.error(f"Failed to generate hash: {e}")
         return None
 
-
-def check_duplicate_images(current_phash: str, db: Session, threshold: int = 3) -> bool:
+def check_duplicate_images(current_hash: str, db: Session) -> bool:
     """
-    Checks DB for images that look visually identical.
-    
-    Threshold Logic for dHash (64-bit):
-    0: Exact duplicate
-    1-2: Likely same image (resized/compressed)
-    3-5: Same template/layout but potentially different content
-    >10: Different images
+    Checks DB for the exact same file hash.
     """
-    if not current_phash:
+    if not current_hash:
         return False
 
-    # Check against the last 100 claims to keep it fast
-    previous_claims = db.query(ClaimRecord).filter(ClaimRecord.image_hash.isnot(None)).order_by(ClaimRecord.id.desc()).limit(100).all()
+    exists = db.query(ClaimRecord).filter(
+        ClaimRecord.image_hash == current_hash
+    ).first()
     
-    try:
-        current_hash_obj = imagehash.hex_to_hash(current_phash)
-    except Exception:
-        return False
-    
-    for claim in previous_claims:
-        try:
-            prev_hash_obj = imagehash.hex_to_hash(claim.image_hash)
-            diff = current_hash_obj - prev_hash_obj
-            
-            if diff <= threshold:
-                logger.warning(f"Duplicate Image Detected! Match with Claim ID {claim.id} (Diff: {diff})")
-                return True 
-        except Exception:
-            continue
-            
+    if exists:
+        logger.warning(f"Duplicate File Detected! Exact match with Claim ID {exists.id}")
+        return True
+        
     return False
